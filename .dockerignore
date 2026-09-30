@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.git
+.gitignore
+RAPPORT.md
+cc2_probe.py

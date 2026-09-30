@@ -1,0 +1,16 @@
+services:
+  cc2-ui:
+    build: .
+    image: cc2-open-local-ui
+    container_name: cc2-ui
+    ports:
+      - "8080:8080"
+    environment:
+      PRINTER_IP: "192.168.1.100"
+      MQTT_PORT: "1883"
+      PRINTER_SN: "F01W2X3Y4Z5A6B"
+      MQTT_USER: "elegoo"
+      MQTT_PASS: "123456"
+      CLIENT_ID: "ecc2_ui"
+      # CAMERA_URL: "http://192.168.1.100:8080/?action=stream"
+    restart: unless-stopped
