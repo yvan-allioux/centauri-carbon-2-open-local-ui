@@ -75,7 +75,7 @@ class CameraBroadcaster:
             try:
                 self._read_stream()
             except Exception as exc:
-                log.warning("flux camera: %s", exc)
+                log.warning("camera stream: %s", exc)
             self._stop.wait(2)
 
     def _read_stream(self):

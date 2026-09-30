@@ -196,6 +196,22 @@ input[type="range"] { width: 220px; accent-color: var(--accent); }
 .tag.bad { color: var(--danger); border-color: var(--danger); }
 .history-item a { color: var(--accent); }
 
+.stats-panel { grid-column: 1 / -1; }
+.segmented { display: inline-flex; gap: 6px; }
+.segmented .btn.active { border-color: var(--accent); color: var(--accent); }
+.stats-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat-series { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.series-row { display: grid; grid-template-columns: 92px 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+.series-bar { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+.series-bar > div { height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+.chart-title { margin: 16px 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.chart-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.chart-legend .lg { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.lg.ext { background: #e5484d; }
+.lg.bed { background: #4f8cff; }
+.lg.chamber { background: #3dd68c; }
+#temp-chart { width: 100%; height: 160px; display: block; background: var(--panel-2); border-radius: 8px; }
+
 .toast { min-height: 18px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
 .toast.error { color: var(--danger); }
 .toast.ok { color: var(--ok); }
@@ -232,7 +248,7 @@ input[type="range"] { width: 220px; accent-color: var(--accent); }
 
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }
-  .camera-panel, .status-panel, .files-panel, .filament-panel, .history-panel, .controls-panel { grid-column: 1; }
+  .camera-panel, .status-panel, .stats-panel, .files-panel, .filament-panel, .history-panel, .controls-panel { grid-column: 1; }
 }
 
 @media (max-width: 640px) {
@@ -269,6 +285,9 @@ input[type="range"] { width: 220px; accent-color: var(--accent); }
   .tray-actions .btn { flex: 1; }
 
   .files-list, .history-list { max-height: none; }
+
+  .stats-cards { gap: 8px; }
+  .series-row { grid-template-columns: 68px 1fr auto; font-size: 11px; }
 
   .modal-box { padding: 14px; }
   .slot-row { flex-wrap: wrap; }

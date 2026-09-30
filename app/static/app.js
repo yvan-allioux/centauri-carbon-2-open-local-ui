@@ -1,72 +1,72 @@
 const MACHINE_STATUS = {
-  0: "Initialisation",
-  1: "Repos",
-  2: "Impression",
-  3: "Chargement",
-  4: "Déchargement",
-  5: "Nivelage auto",
-  6: "Calibration PID",
-  7: "Test résonance",
-  8: "Auto-test",
-  9: "Mise à jour",
-  10: "Homing manuel",
-  11: "Envoi fichier",
+  0: "Initializing",
+  1: "Idle",
+  2: "Printing",
+  3: "Loading",
+  4: "Unloading",
+  5: "Auto-leveling",
+  6: "PID calibration",
+  7: "Resonance test",
+  8: "Self-test",
+  9: "Updating",
+  10: "Manual homing",
+  11: "File transfer",
   12: "Timelapse",
-  13: "Extrusion",
-  14: "Arrêt d'urgence",
-  15: "Reprise après coupure",
+  13: "Extruding",
+  14: "Emergency stop",
+  15: "Power-loss recovery",
 };
 
 const PRINT_STATE = {
-  standby: "En attente",
-  printing: "En cours",
-  paused: "En pause",
-  complete: "Terminée",
-  cancelled: "Annulée",
-  error: "Erreur",
+  standby: "Standby",
+  printing: "Printing",
+  paused: "Paused",
+  complete: "Complete",
+  cancelled: "Cancelled",
+  error: "Error",
 };
 
 const EXCEPTION_STATUS = {
-  101: "Chauffe plateau échouée",
-  102: "Sonde plateau déconnectée",
-  103: "Chauffe buse échouée",
-  104: "Sonde buse déconnectée",
-  105: "Sonde buse en court-circuit",
-  106: "Sonde plateau en court-circuit",
-  107: "Surchauffe tête d'impression",
-  108: "Surchauffe plateau",
-  205: "Sonde chambre déconnectée",
-  206: "Sonde chambre en court-circuit",
-  304: "Homing Z échoué",
-  401: "Erreur accéléromètre",
-  605: "Erreur capteur de pression",
-  701: "Ventilateur carte mère",
-  702: "Ventilateur heatbreak",
-  703: "Ventilateur modèle",
-  704: "Nivelage échoué",
-  705: "Ventilateur auxiliaire",
-  706: "Ventilateur caisson",
-  707: "Capot avant ouvert",
-  801: "Communication extrudeur carte mère",
-  802: "Communication capteur de nivelage",
-  803: "Erreur système critique",
-  901: "Chambre trop chaude",
-  902: "Surchauffe chambre",
-  903: "Surchauffe drivers",
-  904: "Clé USB pleine",
-  905: "Erreur lecture USB",
-  906: "Échec mise à jour",
-  1101: "Ouverture volet d'échappement",
-  1102: "Fermeture volet d'échappement",
-  1210: "Communication Canvas",
-  1211: "Rupture filament Canvas",
-  1220: "Erreur extrudeur",
-  1231: "Coupe filament échouée",
-  1232: "Poignée coupe non relâchée",
-  1241: "Erreur chargement",
-  1242: "Déchargement tête échoué",
-  1251: "Extrusion tête échouée",
-  1261: "Capot avant détaché",
+  101: "Bed heating failed",
+  102: "Bed sensor disconnected",
+  103: "Nozzle heating failed",
+  104: "Nozzle sensor disconnected",
+  105: "Nozzle sensor short circuit",
+  106: "Bed sensor short circuit",
+  107: "Toolhead overheating",
+  108: "Bed overheating",
+  205: "Chamber sensor disconnected",
+  206: "Chamber sensor short circuit",
+  304: "Z homing failed",
+  401: "Accelerometer error",
+  605: "Pressure sensor error",
+  701: "Mainboard fan error",
+  702: "Heatbreak fan error",
+  703: "Model fan error",
+  704: "Leveling failed",
+  705: "Auxiliary fan error",
+  706: "Case fan error",
+  707: "Front cover open",
+  801: "Mainboard-extruder communication error",
+  802: "Leveling sensor communication error",
+  803: "Critical system error",
+  901: "Chamber too hot",
+  902: "Chamber overheating",
+  903: "Driver overheating",
+  904: "USB drive full",
+  905: "USB read error",
+  906: "Update failed",
+  1101: "Exhaust vent open failed",
+  1102: "Exhaust vent close failed",
+  1210: "Canvas communication error",
+  1211: "Canvas filament runout",
+  1220: "Extruder error",
+  1231: "Filament cut failed",
+  1232: "Cutter handle not released",
+  1241: "Loading error",
+  1242: "Toolhead unload failed",
+  1251: "Toolhead extrusion failed",
+  1261: "Front cover detached",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -75,6 +75,9 @@ let latestFiles = {};
 let latestTrays = [];
 let latestActiveTray = null;
 let printTargetFile = "";
+let statPeriod = "today";
+const tempSeries = [];
+const TEMP_MAX_POINTS = 150;
 
 function toast(message, kind = "") {
   const el = $("toast");
@@ -117,12 +120,12 @@ function fmtDuration(sec) {
 function fmtDate(sec) {
   if (!sec) return "—";
   const d = new Date(sec * 1000);
-  return d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("en-US", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function fmtBytes(bytes) {
   if (bytes == null) return "—";
-  const units = ["o", "Ko", "Mo", "Go"];
+  const units = ["B", "KB", "MB", "GB"];
   let v = bytes, i = 0;
   while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
   return `${v.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
@@ -138,7 +141,7 @@ function colorDots(map) {
 function render(data) {
   const badge = $("conn");
   const ok = data.connected && data.registered;
-  badge.textContent = ok ? "connecté" : data.connected ? "connexion…" : "déconnecté";
+  badge.textContent = ok ? "connected" : data.connected ? "connecting…" : "disconnected";
   badge.className = "badge " + (ok ? "online" : "offline");
 
   const wrap = document.querySelector(".camera-wrap");
@@ -154,13 +157,13 @@ function render(data) {
   $("st-print-state").textContent = PRINT_STATE[ps.state] || (ps.state || "—");
 
   let file = ps.filename || "—";
-  if (ps.current_layer != null && ps.total_layer) file += `  (couche ${ps.current_layer}/${ps.total_layer})`;
+  if (ps.current_layer != null && ps.total_layer) file += `  (layer ${ps.current_layer}/${ps.total_layer})`;
   $("st-file").textContent = file;
 
   const progress = ms.progress != null ? ms.progress : 0;
   $("st-progress").textContent =
     ms.progress != null
-      ? `${progress} %  ·  reste ${fmtDuration(ps.remaining_time_sec)}`
+      ? `${progress} %  ·  ${fmtDuration(ps.remaining_time_sec)} left`
       : "—";
   $("progress-bar").style.width = `${progress}%`;
 
@@ -185,18 +188,131 @@ function render(data) {
 
   const ext = s.extruder || {};
   if (ext.filament_detect_enable) {
-    $("st-filament").textContent = ext.filament_detected ? "présent" : "absent";
+    $("st-filament").textContent = ext.filament_detected ? "present" : "runout";
   } else {
-    $("st-filament").textContent = "capteur off";
+    $("st-filament").textContent = "sensor off";
   }
 
-  $("st-mesh").textContent = ps.bed_mesh_detect ? "OK" : "absent";
+  $("st-mesh").textContent = ps.bed_mesh_detect ? "OK" : "missing";
 
   const errs = ms.exception_status || [];
   $("st-error").textContent = errs.length
     ? errs.map((e) => EXCEPTION_STATUS[e] || `Code ${e}`).join(", ")
     : "—";
+
+  pushTemp(s);
+  drawTempChart();
 }
+
+function pushTemp(s) {
+  tempSeries.push({
+    ext: s.extruder ? s.extruder.temperature : null,
+    bed: s.heater_bed ? s.heater_bed.temperature : null,
+    chamber: s.ztemperature_sensor ? s.ztemperature_sensor.temperature : null,
+  });
+  if (tempSeries.length > TEMP_MAX_POINTS) tempSeries.shift();
+}
+
+function drawTempChart() {
+  const canvas = $("temp-chart");
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.getBoundingClientRect().width;
+  const h = 160;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = { l: 32, r: 8, t: 8, b: 16 };
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+
+  let maxV = 50;
+  tempSeries.forEach((p) => {
+    maxV = Math.max(maxV, p.ext || 0, p.bed || 0, p.chamber || 0);
+  });
+  maxV = Math.ceil((maxV + 10) / 50) * 50;
+
+  ctx.strokeStyle = "rgba(255,255,255,.08)";
+  ctx.fillStyle = "rgba(255,255,255,.4)";
+  ctx.font = "10px system-ui, sans-serif";
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * (i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(pad.l + cw, y);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(maxV * (1 - i / 4))), 4, y + 3);
+  }
+
+  if (tempSeries.length < 2) return;
+  const n = tempSeries.length;
+  const xAt = (i) => pad.l + cw * (i / (n - 1));
+  const yAt = (v) => pad.t + ch * (1 - Math.min(1, (v || 0) / maxV));
+  const line = (key, color) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    tempSeries.forEach((p, i) => {
+      const x = xAt(i);
+      const y = yAt(p[key]);
+      if (i) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  };
+  line("ext", "#e5484d");
+  line("bed", "#4f8cff");
+  line("chamber", "#3dd68c");
+}
+
+function renderStats(data) {
+  $("stat-prints").textContent = `${data.prints} ${data.prints === 1 ? "print" : "prints"}`;
+  $("stat-time").textContent = fmtDuration(data.print_time_sec);
+  $("stat-filament").textContent = `${data.filament_g} g`;
+  const series = data.series || [];
+  const maxFil = Math.max(1, ...series.map((s) => s.filament_g));
+  $("stat-series").innerHTML = series
+    .map((s) => {
+      const pct = Math.round((s.filament_g / maxFil) * 100);
+      const d = new Date(`${s.date}T00:00:00`);
+      const lbl = d.toLocaleDateString("en-US", { weekday: "short", day: "2-digit", month: "2-digit" });
+      return `
+        <div class="series-row">
+          <span class="muted">${lbl}</span>
+          <div class="series-bar"><div style="width:${pct}%"></div></div>
+          <span>${s.filament_g.toFixed(1)} g · ${fmtDuration(s.print_time_sec)}</span>
+        </div>`;
+    })
+    .join("");
+}
+
+async function loadStats(silent = true) {
+  try {
+    const tz = new Date().getTimezoneOffset();
+    const resp = await fetch(`/api/stats?period=${statPeriod}&tz=${tz}`);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+    renderStats(data);
+  } catch (e) {
+    if (!silent) toast(e.message, "error");
+  }
+}
+
+function setStatPeriod(period) {
+  statPeriod = period;
+  $("stat-today").classList.toggle("active", period === "today");
+  $("stat-week").classList.toggle("active", period === "week");
+  loadStats(false);
+}
+
+$("stat-today").addEventListener("click", () => setStatPeriod("today"));
+$("stat-week").addEventListener("click", () => setStatPeriod("week"));
+window.addEventListener("resize", drawTempChart);
 
 async function refresh() {
   try {
@@ -210,7 +326,7 @@ async function refresh() {
 async function run(label, fn) {
   try {
     await fn();
-    toast(label + " envoyé", "ok");
+    toast(label + " sent", "ok");
     setTimeout(refresh, 500);
   } catch (e) {
     toast(e.message, "error");
@@ -227,7 +343,7 @@ document.querySelectorAll("[data-cmd]").forEach((btn) => {
 
 document.querySelectorAll("[data-light]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    run("Lumière", () => send(1029, { power: Number(btn.dataset.light) }));
+    run("Light", () => send(1029, { power: Number(btn.dataset.light) }));
   });
 });
 
@@ -237,7 +353,7 @@ $("apply-temps").addEventListener("click", () => {
   const bed = Number($("temp-bed").value);
   if (!Number.isNaN(ext)) params.extruder = ext;
   if (!Number.isNaN(bed)) params.heater_bed = bed;
-  run("Températures", () => send(1028, params));
+  run("Temperatures", () => send(1028, params));
 });
 
 document.querySelectorAll(".preset").forEach((btn) => {
@@ -250,13 +366,13 @@ document.querySelectorAll(".preset").forEach((btn) => {
     if (ext > 0) params.extruder = ext;
     else params.extruder = 0;
     params.heater_bed = bed;
-    run("Préréglage", () => send(1028, params));
+    run("Preset", () => send(1028, params));
   });
 });
 
 $("fan").addEventListener("input", (e) => { $("fan-val").textContent = e.target.value; });
 $("apply-fan").addEventListener("click", () => {
-  run("Ventilateur", () => send(1030, { fan: Number($("fan").value) }));
+  run("Fan", () => send(1030, { fan: Number($("fan").value) }));
 });
 
 $("home").addEventListener("click", () => {
@@ -264,13 +380,13 @@ $("home").addEventListener("click", () => {
 });
 
 $("move").addEventListener("click", () => {
-  run("Déplacement", () =>
+  run("Move", () =>
     send(1027, { axes: $("move-axis").value, distance: Number($("move-dist").value) })
   );
 });
 
 $("apply-speed").addEventListener("click", () => {
-  run("Vitesse", () => send(1031, { mode: Number($("speed-mode").value) }));
+  run("Speed", () => send(1031, { mode: Number($("speed-mode").value) }));
 });
 
 const thumbQueue = [];
@@ -303,13 +419,13 @@ function renderFiles(data) {
   latestFiles = {};
   files.forEach((f) => { latestFiles[f.filename] = f; });
   if (!files.length) {
-    list.innerHTML = '<p class="muted">Aucun fichier sur la mémoire interne.</p>';
+    list.innerHTML = '<p class="muted">No files in internal storage.</p>';
     return;
   }
   list.innerHTML = files
     .map((f) => {
       const sub = [
-        f.layer != null ? `${f.layer} couches` : null,
+        f.layer != null ? `${f.layer} layers` : null,
         f.print_time ? fmtDuration(f.print_time) : null,
         f.size ? fmtBytes(f.size) : null,
         f.total_filament_used ? `${f.total_filament_used} g` : null,
@@ -323,8 +439,8 @@ function renderFiles(data) {
             <div class="file-colors">${colorDots(f.color_map)}</div>
           </div>
           <div class="file-actions">
-            <button class="btn small" data-start="${f.filename.replace(/"/g, "&quot;")}">Imprimer</button>
-            <button class="btn small danger" data-delete="${f.filename.replace(/"/g, "&quot;")}">Suppr.</button>
+            <button class="btn small" data-start="${f.filename.replace(/"/g, "&quot;")}">Print</button>
+            <button class="btn small danger" data-delete="${f.filename.replace(/"/g, "&quot;")}">Delete</button>
           </div>
         </div>`;
     })
@@ -363,13 +479,13 @@ function renderHistory(data) {
   const list = $("history-list");
   const tasks = data.tasks || [];
   if (!tasks.length) {
-    list.innerHTML = '<p class="muted">Historique vide.</p>';
+    list.innerHTML = '<p class="muted">No history.</p>';
     return;
   }
   list.innerHTML = tasks
     .map((t) => {
       const status = t.task_status === 1 ? "ok" : t.task_status === 2 ? "bad" : "muted";
-      const label = t.task_status === 1 ? "Terminé" : t.task_status === 2 ? "Échec" : `Code ${t.task_status}`;
+      const label = t.task_status === 1 ? "Completed" : t.task_status === 2 ? "Failed" : `Code ${t.task_status}`;
       const dur = t.end_time && t.begin_time ? fmtDuration(t.end_time - t.begin_time) : "—";
       const video = t.time_lapse_video_url
         ? `<a href="${t.time_lapse_video_url}" target="_blank" rel="noopener">timelapse</a>`
@@ -409,7 +525,7 @@ function renderFilament(data) {
   latestTrays = trays;
   latestActiveTray = info.active_tray_id != null ? info.active_tray_id : null;
   if (!trays.length) {
-    list.innerHTML = '<p class="muted">Aucune bobine détectée.</p>';
+    list.innerHTML = '<p class="muted">No filament detected.</p>';
     return;
   }
   list.innerHTML = trays
@@ -417,17 +533,17 @@ function renderFilament(data) {
       const active = t.tray_id === info.active_tray_id;
       const present = t.status > 0;
       const color = t.filament_color || "#333";
-      const name = present ? `${t.filament_type || t.filament_name || "?"} · ${t.brand || ""}`.trim() : "vide";
+      const name = present ? `${t.filament_type || t.filament_name || "?"} · ${t.brand || ""}`.trim() : "empty";
       const temps = present && t.min_nozzle_temp ? `${t.min_nozzle_temp}-${t.max_nozzle_temp} °C` : "—";
       const actions = present
-        ? `<button class="btn small" data-load="${t.tray_id}">Charger</button>
-           <button class="btn small" data-unload="${t.tray_id}">Décharger</button>`
+        ? `<button class="btn small" data-load="${t.tray_id}">Load</button>
+           <button class="btn small" data-unload="${t.tray_id}">Unload</button>`
         : "";
       return `
         <div class="tray${active ? " active" : ""}">
           <span class="swatch" style="background:${color}"></span>
           <div class="tray-meta">
-            <div class="file-name">Slot ${t.tray_id} ${active ? "· actif" : ""}</div>
+            <div class="file-name">Slot ${t.tray_id + 1} ${active ? "· active" : ""}</div>
             <div class="file-sub muted">${name} · ${temps}</div>
           </div>
           <div class="tray-actions">${actions}</div>
@@ -480,12 +596,12 @@ async function uploadFile(file) {
         if (xhr.status >= 200 && xhr.status < 300) resolve(body);
         else reject(new Error(body.error || `HTTP ${xhr.status}`));
       };
-      xhr.onerror = () => reject(new Error("échec réseau"));
+      xhr.onerror = () => reject(new Error("network error"));
       xhr.send(form);
     });
     const code = result.printer && result.printer.error_code;
-    if (code) throw new Error(`imprimante: code ${code}`);
-    toast(`« ${result.filename} » envoyé`, "ok");
+    if (code) throw new Error(`printer: code ${code}`);
+    toast(`"${result.filename}" uploaded`, "ok");
     loadFiles();
   } catch (e) {
     toast("Upload: " + e.message, "error");
@@ -500,7 +616,7 @@ function trayOptions(selectedTray) {
     .filter((t) => t.status > 0)
     .map((t) => {
       const sel = t.tray_id === selectedTray ? " selected" : "";
-      const label = `Slot ${t.tray_id} — ${t.filament_type || t.filament_name || "?"} ${t.brand || ""}`.trim();
+      const label = `Slot ${t.tray_id + 1} — ${t.filament_type || t.filament_name || "?"} ${t.brand || ""}`.trim();
       return `<option value="${t.tray_id}"${sel}>${label}</option>`;
     })
     .join("");
@@ -525,7 +641,7 @@ async function openPrintDialog(name) {
   $("print-slot-map").innerHTML = colors
     .map((c, i) => {
       const selected = defaultTrayFor(c.color);
-      const label = c.name ? c.name : `Couleur ${i + 1}`;
+      const label = c.name ? c.name : `Color ${i + 1}`;
       return `
         <div class="slot-row">
           <span class="swatch" style="background:${c.color || "#888"}"></span>
@@ -541,8 +657,8 @@ async function openPrintDialog(name) {
   printTargetFile = name;
   $("print-modal-file").textContent = name;
   $("print-modal-hint").textContent = anyTray
-    ? "Choisis la bobine utilisée pour chaque couleur du fichier."
-    : "Aucune bobine détectée.";
+    ? "Choose the spool to use for each color in the file."
+    : "No filament detected.";
   $("print-confirm").disabled = !anyTray;
   $("print-modal").classList.remove("hidden");
 }
@@ -559,7 +675,7 @@ function startPrint() {
     tray_id: Number(s.value),
   }));
   closePrintDialog();
-  run("Impression", () =>
+  run("Print", () =>
     send(1020, {
       filename: name,
       storage_media: "local",
@@ -591,8 +707,8 @@ $("files-list").addEventListener("click", (e) => {
   }
   if (del) {
     const name = del.dataset.delete;
-    if (!confirm(`Supprimer « ${name} » ?`)) return;
-    run("Suppression", () => send(1047, { storage_media: "local", file_path: [name] }))
+    if (!confirm(`Delete "${name}"?`)) return;
+    run("Delete", () => send(1047, { storage_media: "local", file_path: [name] }))
       .then(() => loadFiles());
   }
 });
@@ -602,21 +718,21 @@ $("filament-list").addEventListener("click", (e) => {
   const unload = e.target.closest("[data-unload]");
   if (load) {
     const tray = Number(load.dataset.load);
-    if (!confirm(`Charger le filament du slot ${tray} ?`)) return;
-    run("Chargement", () => send(2001, { canvas_id: 0, tray_id: tray }))
+    if (!confirm(`Load filament from slot ${tray + 1}?`)) return;
+    run("Load", () => send(2001, { canvas_id: 0, tray_id: tray }))
       .then(() => setTimeout(() => loadFilament(), 2000));
   }
   if (unload) {
     const tray = Number(unload.dataset.unload);
-    if (!confirm(`Décharger le filament du slot ${tray} ?`)) return;
-    run("Déchargement", () => send(2002, { canvas_id: 0, tray_id: tray }))
+    if (!confirm(`Unload filament from slot ${tray + 1}?`)) return;
+    run("Unload", () => send(2002, { canvas_id: 0, tray_id: tray }))
       .then(() => setTimeout(() => loadFilament(), 2000));
   }
 });
 
 $("auto-refill").addEventListener("change", (e) => {
   $("auto-refill").dataset.bound = "1";
-  run("Recharge auto", () => send(2004, { enable: e.target.checked }));
+  run("Auto-refill", () => send(2004, { enable: e.target.checked }));
 });
 
 $("files-refresh").addEventListener("click", () => loadFiles(false));
@@ -646,6 +762,8 @@ loadFiles();
 loadHistory();
 loadFilament();
 loadInfo();
+loadStats();
 setInterval(refresh, 2000);
 setInterval(() => loadFilament(), 15000);
 setInterval(() => loadHistory(), 30000);
+setInterval(() => loadStats(), 60000);

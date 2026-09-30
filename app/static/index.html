@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Centauri Carbon 2 — UI locale</title>
+  <title>Centauri Carbon 2 — Local UI</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,21 +12,21 @@
       <h1>Centauri Carbon 2</h1>
       <span id="printer-info" class="muted"></span>
     </div>
-    <span id="conn" class="badge offline">déconnecté</span>
+    <span id="conn" class="badge offline">disconnected</span>
   </header>
 
   <div class="topbar">
     <div class="topbar-group">
-      <h3>Impression</h3>
+      <h3>Print</h3>
       <div class="row">
         <button data-cmd="1021" class="btn">Pause</button>
-        <button data-cmd="1023" class="btn">Reprendre</button>
-        <button data-cmd="1022" class="btn danger" data-confirm="Arrêter l'impression ?">Stop</button>
-        <button data-cmd="1007" class="btn danger" data-confirm="Arrêt d'urgence — es-tu sûr ?">Urgence</button>
+        <button data-cmd="1023" class="btn">Resume</button>
+        <button data-cmd="1022" class="btn danger" data-confirm="Stop the print?">Stop</button>
+        <button data-cmd="1007" class="btn danger" data-confirm="Emergency stop — are you sure?">Emergency</button>
       </div>
     </div>
     <div class="topbar-group">
-      <h3>Lumière</h3>
+      <h3>Light</h3>
       <div class="row">
         <button class="btn" data-light="1">On</button>
         <button class="btn" data-light="0">Off</button>
@@ -36,39 +36,62 @@
 
   <main>
     <section class="panel camera-panel">
-      <h2>Caméra</h2>
+      <h2>Camera</h2>
       <div class="camera-wrap">
-        <img id="cam" src="/api/stream" alt="Flux caméra">
-        <span id="cam-off" class="cam-off">flux indisponible</span>
+        <img id="cam" src="/api/stream" alt="Camera stream">
+        <span id="cam-off" class="cam-off">stream unavailable</span>
       </div>
     </section>
 
     <section class="panel status-panel">
-      <h2>État</h2>
+      <h2>Status</h2>
       <div class="grid">
         <div class="stat"><span class="label">Machine</span><span id="st-machine">—</span></div>
-        <div class="stat"><span class="label">Impression</span><span id="st-print-state">—</span></div>
-        <div class="stat"><span class="label">Fichier</span><span id="st-file">—</span></div>
-        <div class="stat"><span class="label">Progression</span><span id="st-progress">—</span></div>
-        <div class="stat"><span class="label">Buse</span><span id="st-ext">—</span></div>
-        <div class="stat"><span class="label">Plateau</span><span id="st-bed">—</span></div>
-        <div class="stat"><span class="label">Chambre</span><span id="st-chamber">—</span></div>
+        <div class="stat"><span class="label">Print</span><span id="st-print-state">—</span></div>
+        <div class="stat"><span class="label">File</span><span id="st-file">—</span></div>
+        <div class="stat"><span class="label">Progress</span><span id="st-progress">—</span></div>
+        <div class="stat"><span class="label">Nozzle</span><span id="st-ext">—</span></div>
+        <div class="stat"><span class="label">Bed</span><span id="st-bed">—</span></div>
+        <div class="stat"><span class="label">Chamber</span><span id="st-chamber">—</span></div>
         <div class="stat"><span class="label">Position X / Y / Z</span><span id="st-pos">—</span></div>
-        <div class="stat"><span class="label">Vitesse</span><span id="st-speed">—</span></div>
-        <div class="stat"><span class="label">Ventilateur pièce</span><span id="st-fan">—</span></div>
-        <div class="stat"><span class="label">Aux / caisson</span><span id="st-fan2">—</span></div>
-        <div class="stat"><span class="label">Contrôleur / hotend</span><span id="st-fan3">—</span></div>
+        <div class="stat"><span class="label">Speed</span><span id="st-speed">—</span></div>
+        <div class="stat"><span class="label">Part cooling fan</span><span id="st-fan">—</span></div>
+        <div class="stat"><span class="label">Aux / enclosure</span><span id="st-fan2">—</span></div>
+        <div class="stat"><span class="label">Controller / hotend</span><span id="st-fan3">—</span></div>
         <div class="stat"><span class="label">Filament</span><span id="st-filament">—</span></div>
-        <div class="stat"><span class="label">Nivellement</span><span id="st-mesh">—</span></div>
-        <div class="stat wide"><span class="label">Anomalie</span><span id="st-error">—</span></div>
+        <div class="stat"><span class="label">Bed mesh</span><span id="st-mesh">—</span></div>
+        <div class="stat wide"><span class="label">Error</span><span id="st-error">—</span></div>
       </div>
       <div class="progress"><div id="progress-bar"></div></div>
     </section>
 
+    <section class="panel stats-panel">
+      <h2>
+        Statistics
+        <span class="segmented">
+          <button id="stat-today" class="btn small active">Today</button>
+          <button id="stat-week" class="btn small">This week</button>
+        </span>
+      </h2>
+      <div class="stats-cards">
+        <div class="stat"><span class="label">Prints</span><span id="stat-prints">—</span></div>
+        <div class="stat"><span class="label">Print time</span><span id="stat-time">—</span></div>
+        <div class="stat"><span class="label">Filament used</span><span id="stat-filament">—</span></div>
+      </div>
+      <div id="stat-series" class="stat-series"></div>
+      <h3 class="chart-title">Live temperatures</h3>
+      <div class="chart-legend">
+        <span><i class="lg ext"></i>Nozzle</span>
+        <span><i class="lg bed"></i>Bed</span>
+        <span><i class="lg chamber"></i>Chamber</span>
+      </div>
+      <canvas id="temp-chart"></canvas>
+    </section>
+
     <section class="panel files-panel">
       <h2>
-        Fichiers
-        <button id="files-refresh" class="btn small">Rafraîchir</button>
+        Files
+        <button id="files-refresh" class="btn small">Refresh</button>
       </h2>
       <div class="storage">
         <div class="storage-bar"><div id="storage-fill"></div></div>
@@ -76,7 +99,7 @@
       </div>
       <div id="upload-zone" class="upload-zone">
         <input id="upload-input" type="file" accept=".gcode,.gco,.g,.bgcode" hidden>
-        <span>Déposer un fichier .gcode ici ou <button id="upload-btn" class="btn small">parcourir</button></span>
+        <span>Drop a .gcode file here or <button id="upload-btn" class="btn small">browse</button></span>
         <progress id="upload-progress" value="0" max="100" hidden></progress>
       </div>
       <div id="files-list" class="files-list"></div>
@@ -85,43 +108,43 @@
     <section class="panel filament-panel">
       <h2>Filament</h2>
       <div class="row auto-refill-row">
-        <label class="check"><input id="auto-refill" type="checkbox"> Recharge automatique</label>
+        <label class="check"><input id="auto-refill" type="checkbox"> Auto-refill</label>
       </div>
       <div id="filament-list" class="filament-list"></div>
     </section>
 
     <section class="panel history-panel">
       <h2>
-        Historique
-        <button id="history-refresh" class="btn small">Rafraîchir</button>
+        History
+        <button id="history-refresh" class="btn small">Refresh</button>
       </h2>
       <div id="history-list" class="history-list"></div>
     </section>
 
     <section class="panel controls-panel">
-      <h2>Contrôle</h2>
+      <h2>Controls</h2>
 
       <div class="group">
-        <h3>Températures (°C)</h3>
+        <h3>Temperatures (°C)</h3>
         <div class="row">
-          <label>Buse <input id="temp-ext" type="number" min="0" max="300" step="5" value="210"></label>
-          <label>Plateau <input id="temp-bed" type="number" min="0" max="120" step="5" value="60"></label>
-          <button id="apply-temps" class="btn">Appliquer</button>
+          <label>Nozzle <input id="temp-ext" type="number" min="0" max="300" step="5" value="210"></label>
+          <label>Bed <input id="temp-bed" type="number" min="0" max="120" step="5" value="60"></label>
+          <button id="apply-temps" class="btn">Apply</button>
         </div>
         <div class="row presets">
-          <span class="muted">Préréglages :</span>
+          <span class="muted">Presets:</span>
           <button class="btn small preset" data-ext="210" data-bed="60">PLA</button>
           <button class="btn small preset" data-ext="240" data-bed="80">PETG</button>
-          <button class="btn small preset" data-ext="0" data-bed="0">Refroidir</button>
+          <button class="btn small preset" data-ext="0" data-bed="0">Cool down</button>
         </div>
       </div>
 
       <div class="group">
-        <h3>Ventilateur pièce (PWM)</h3>
+        <h3>Part cooling fan (PWM)</h3>
         <div class="row">
           <input id="fan" type="range" min="0" max="255" value="0">
           <span id="fan-val">0</span>
-          <button id="apply-fan" class="btn">Appliquer</button>
+          <button id="apply-fan" class="btn">Apply</button>
         </div>
       </div>
 
@@ -129,7 +152,7 @@
         <h3>Axes</h3>
         <div class="row">
           <button id="home" class="btn">Home XYZ</button>
-          <label>Axe
+          <label>Axis
             <select id="move-axis">
               <option value="x">X</option>
               <option value="y">Y</option>
@@ -137,20 +160,20 @@
             </select>
           </label>
           <label>Distance (mm) <input id="move-dist" type="number" step="1" value="10"></label>
-          <button id="move" class="btn">Déplacer</button>
+          <button id="move" class="btn">Move</button>
         </div>
       </div>
 
       <div class="group">
-        <h3>Vitesse d'impression</h3>
+        <h3>Print speed</h3>
         <div class="row">
           <select id="speed-mode">
-            <option value="0">Silencieux</option>
-            <option value="1" selected>Équilibré</option>
+            <option value="0">Silent</option>
+            <option value="1" selected>Balanced</option>
             <option value="2">Sport</option>
             <option value="3">Frenzy</option>
           </select>
-          <button id="apply-speed" class="btn">Appliquer</button>
+          <button id="apply-speed" class="btn">Apply</button>
         </div>
       </div>
 
@@ -160,13 +183,13 @@
 
   <div id="print-modal" class="modal hidden">
     <div class="modal-box">
-      <h3>Lancer l'impression</h3>
+      <h3>Start print</h3>
       <p id="print-modal-file" class="muted"></p>
       <div id="print-slot-map" class="slot-map"></div>
       <p id="print-modal-hint" class="muted"></p>
       <div class="modal-actions">
-        <button id="print-cancel" class="btn">Annuler</button>
-        <button id="print-confirm" class="btn primary">Lancer</button>
+        <button id="print-cancel" class="btn">Cancel</button>
+        <button id="print-confirm" class="btn primary">Start</button>
       </div>
     </div>
   </div>

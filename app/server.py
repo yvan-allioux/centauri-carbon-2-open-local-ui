@@ -3,6 +3,8 @@ import hashlib
 import logging
 import os
 import queue
+import time
+from datetime import datetime, timedelta, timezone
 
 import requests
 from flask import Flask, Response, jsonify, request
@@ -97,9 +99,9 @@ def command():
     try:
         method = int(method)
     except (TypeError, ValueError):
-        return jsonify({"error": "method invalide"}), 400
+        return jsonify({"error": "invalid method"}), 400
     if method not in ALLOWED_METHODS:
-        return jsonify({"error": f"method {method} non autorisee"}), 400
+        return jsonify({"error": f"method {method} not allowed"}), 400
     try:
         result = printer.command(method, params)
     except Exception as exc:
@@ -138,14 +140,14 @@ def thumbnail():
     name = request.args.get("name", "")
     media = request.args.get("storage", "local")
     if not name:
-        return jsonify({"error": "parametre 'name' requis"}), 400
+        return jsonify({"error": "missing 'name' parameter"}), 400
     try:
         result = _result(printer.command(1045, {"storage_media": media, "file_name": name}))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 502
     encoded = result.get("thumbnail")
     if not encoded:
-        return jsonify({"error": "pas de vignette"}), 404
+        return jsonify({"error": "no thumbnail"}), 404
     return Response(base64.b64decode(encoded), mimetype="image/png")
 
 
@@ -171,19 +173,123 @@ def filament():
         return jsonify({"error": str(exc)}), 502
 
 
+_stats_cache = {"ts": 0.0, "data": None}
+
+
+def _history_and_files():
+    cached = _stats_cache["data"]
+    if cached is not None and (time.time() - _stats_cache["ts"] < 30):
+        return cached
+    tasks = _result(printer.command(1036, {"page": 1, "page_size": 200})).get(
+        "history_task_list", []
+    )
+    files = _result(
+        printer.command(1044, {"storage_media": "local", "offset": 0, "limit": 500})
+    ).get("file_list", [])
+    filament_by_name = {
+        f.get("filename"): (f.get("total_filament_used") or 0) for f in files
+    }
+    _stats_cache["data"] = (tasks, filament_by_name)
+    _stats_cache["ts"] = time.time()
+    return tasks, filament_by_name
+
+
+@app.get("/api/stats")
+def stats():
+    period = request.args.get("period", "today")
+    # JS getTimezoneOffset(): UTC = local + offset  =>  local = UTC - offset
+    offset_min = request.args.get("tz", type=int) or 0
+    now_local = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=offset_min)
+    if period == "week":
+        start_local = (now_local - timedelta(days=now_local.weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        label = "This week"
+    else:
+        period = "today"
+        start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        label = "Today"
+    start = (start_local + timedelta(minutes=offset_min)).replace(tzinfo=timezone.utc).timestamp()
+
+    try:
+        tasks, filament_by_name = _history_and_files()
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 502
+
+    def local_date(epoch):
+        return (
+            datetime.fromtimestamp(epoch, timezone.utc).replace(tzinfo=None)
+            - timedelta(minutes=offset_min)
+        ).date()
+
+    buckets = {}
+    day = start_local.date()
+    last_day = now_local.date()
+    while day <= last_day:
+        buckets[day.isoformat()] = {
+            "date": day.isoformat(),
+            "prints": 0,
+            "print_time_sec": 0,
+            "filament_g": 0.0,
+        }
+        day += timedelta(days=1)
+
+    total_time = 0
+    total_filament = 0.0
+    prints = 0
+    successes = 0
+    unknown = 0
+
+    for task in tasks:
+        begin = task.get("begin_time") or 0
+        if begin < start:
+            continue
+        end = task.get("end_time") or 0
+        duration = max(0, end - begin) if end else 0
+        name = task.get("task_name") or ""
+        grams = filament_by_name.get(name)
+        if grams is None:
+            unknown += 1
+            grams = 0
+        prints += 1
+        if task.get("task_status") == 1:
+            successes += 1
+        total_time += duration
+        total_filament += grams
+        key = local_date(begin).isoformat()
+        if key in buckets:
+            buckets[key]["prints"] += 1
+            buckets[key]["print_time_sec"] += duration
+            buckets[key]["filament_g"] += grams
+
+    return jsonify(
+        {
+            "period": period,
+            "label": label,
+            "start": start,
+            "prints": prints,
+            "successes": successes,
+            "print_time_sec": int(total_time),
+            "filament_g": round(total_filament, 1),
+            "unknown_filament_prints": unknown,
+            "series": list(buckets.values()),
+        }
+    )
+
+
 @app.post("/api/upload")
 def upload():
     file = request.files.get("file")
     if file is None or not file.filename:
-        return jsonify({"error": "aucun fichier recu"}), 400
+        return jsonify({"error": "no file received"}), 400
     name = os.path.basename(file.filename)
     try:
         name.encode("latin-1")
     except UnicodeEncodeError:
-        return jsonify({"error": "nom de fichier non supporte (latin-1 requis)"}), 400
+        return jsonify({"error": "unsupported filename (latin-1 required)"}), 400
     data = file.read()
     if not data:
-        return jsonify({"error": "fichier vide"}), 400
+        return jsonify({"error": "empty file"}), 400
     headers = {
         "Content-Type": "application/octet-stream",
         "Content-Range": f"bytes 0-{len(data) - 1}/{len(data)}",
@@ -238,7 +344,7 @@ def stream():
 def main():
     printer.start()
     camera.start()
-    log.info("UI sur http://%s:%s -> imprimante %s", config.WEB_HOST, config.WEB_PORT, config.PRINTER_IP)
+    log.info("UI at http://%s:%s -> printer %s", config.WEB_HOST, config.WEB_PORT, config.PRINTER_IP)
     app.run(host=config.WEB_HOST, port=config.WEB_PORT, threaded=True)
 
 

@@ -96,7 +96,7 @@ class PrinterClient:
 
     def command(self, method, params=None, timeout=None):
         if not self._registered.is_set():
-            raise RuntimeError("client non enregistre aupres de l'imprimante")
+            raise RuntimeError("client not registered with the printer")
         seq = next(self._seq)
         entry = {"event": threading.Event(), "result": None}
         with self._pending_lock:
@@ -107,15 +107,15 @@ class PrinterClient:
         with self._pending_lock:
             self._pending.pop(seq, None)
         if not got:
-            raise TimeoutError(f"pas de reponse pour la methode {method}")
+            raise TimeoutError(f"no response for method {method}")
         result = entry["result"] or {}
         err = (result.get("result") or {}).get("error_code", 0)
         if err:
-            raise RuntimeError(f"erreur imprimante {err} (method {method})")
+            raise RuntimeError(f"printer error {err} (method {method})")
         return result
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
-        log.info("MQTT connecte (rc=%s)", reason_code)
+        log.info("MQTT connected (rc=%s)", reason_code)
         self._connected.set()
         self._registered.clear()
         client.subscribe(
@@ -131,7 +131,7 @@ class PrinterClient:
         )
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
-        log.warning("MQTT deconnecte (rc=%s)", reason_code)
+        log.warning("MQTT disconnected (rc=%s)", reason_code)
         self._connected.clear()
         self._registered.clear()
 
@@ -145,12 +145,12 @@ class PrinterClient:
         if topic == self.topic_register_response:
             if isinstance(data, dict) and str(data.get("error", "")).lower() == "ok":
                 self._registered.set()
-                log.info("enregistre aupres de l'imprimante")
+                log.info("registered with the printer")
                 try:
                     self.command(1001)
                     self.command(1002)
                 except Exception as exc:
-                    log.warning("refresh initial: %s", exc)
+                    log.warning("initial refresh: %s", exc)
             return
 
         if topic == self.topic_status:
