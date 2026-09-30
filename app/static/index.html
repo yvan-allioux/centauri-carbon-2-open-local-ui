@@ -15,6 +15,25 @@
     <span id="conn" class="badge offline">déconnecté</span>
   </header>
 
+  <div class="topbar">
+    <div class="topbar-group">
+      <h3>Impression</h3>
+      <div class="row">
+        <button data-cmd="1021" class="btn">Pause</button>
+        <button data-cmd="1023" class="btn">Reprendre</button>
+        <button data-cmd="1022" class="btn danger" data-confirm="Arrêter l'impression ?">Stop</button>
+        <button data-cmd="1007" class="btn danger" data-confirm="Arrêt d'urgence — es-tu sûr ?">Urgence</button>
+      </div>
+    </div>
+    <div class="topbar-group">
+      <h3>Lumière</h3>
+      <div class="row">
+        <button class="btn" data-light="1">On</button>
+        <button class="btn" data-light="0">Off</button>
+      </div>
+    </div>
+  </div>
+
   <main>
     <section class="panel camera-panel">
       <h2>Caméra</h2>
@@ -81,24 +100,6 @@
 
     <section class="panel controls-panel">
       <h2>Contrôle</h2>
-
-      <div class="group">
-        <h3>Impression</h3>
-        <div class="row">
-          <button data-cmd="1021" class="btn">Pause</button>
-          <button data-cmd="1023" class="btn">Reprendre</button>
-          <button data-cmd="1022" class="btn danger" data-confirm="Arrêter l'impression ?">Stop</button>
-          <button data-cmd="1007" class="btn danger" data-confirm="Arrêt d'urgence — es-tu sûr ?">Urgence</button>
-        </div>
-      </div>
-
-      <div class="group">
-        <h3>Lumière</h3>
-        <div class="row">
-          <button class="btn" data-light="1">On</button>
-          <button class="btn" data-light="0">Off</button>
-        </div>
-      </div>
 
       <div class="group">
         <h3>Températures (°C)</h3>

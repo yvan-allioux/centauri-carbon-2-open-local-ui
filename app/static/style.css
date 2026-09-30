@@ -39,6 +39,23 @@ header h1 { font-size: 18px; margin: 0; font-weight: 600; }
 .badge.online { color: var(--ok); border-color: var(--ok); }
 .badge.offline { color: var(--danger); border-color: var(--danger); }
 
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+}
+.topbar-group { display: flex; align-items: center; gap: 8px; }
+.topbar h3 { margin: 0; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.topbar .row { gap: 8px; }
+
 main {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -216,4 +233,44 @@ input[type="range"] { width: 220px; accent-color: var(--accent); }
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; }
   .camera-panel, .status-panel, .files-panel, .filament-panel, .history-panel, .controls-panel { grid-column: 1; }
+}
+
+@media (max-width: 640px) {
+  header { padding: 10px 14px; }
+  header h1 { font-size: 16px; }
+
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .topbar-group { flex: 1 1 100%; }
+  .topbar-group .row { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .topbar .btn { width: 100%; min-height: 44px; }
+
+  main { gap: 12px; padding: 12px; }
+  .panel { padding: 12px; }
+
+  .camera-wrap { aspect-ratio: 4 / 3; }
+
+  .grid { gap: 8px; }
+  .stat { padding: 8px; }
+  .stat span:last-child { font-size: 14px; }
+
+  input[type="range"] { width: 100%; }
+  input[type="number"], select { width: 100%; }
+  .row { gap: 8px; }
+  .row label { flex: 1 1 100%; justify-content: space-between; }
+
+  .file-item { flex-wrap: wrap; }
+  .file-meta { flex-basis: calc(100% - 60px); }
+  .file-actions { width: 100%; }
+  .file-actions .btn { flex: 1; }
+  .thumb { width: 48px; height: 48px; }
+
+  .tray { flex-wrap: wrap; }
+  .tray-actions { width: 100%; }
+  .tray-actions .btn { flex: 1; }
+
+  .files-list, .history-list { max-height: none; }
+
+  .modal-box { padding: 14px; }
+  .slot-row { flex-wrap: wrap; }
+  .slot-row select { flex-basis: 100%; }
 }
