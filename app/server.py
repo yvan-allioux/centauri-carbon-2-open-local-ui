@@ -342,6 +342,10 @@ def stream():
 
 
 def main():
+    if not config.PRINTER_IP or not config.PRINTER_SN:
+        raise SystemExit(
+            "PRINTER_IP and PRINTER_SN must be set (environment or docker-compose.yml)."
+        )
     printer.start()
     camera.start()
     log.info("UI at http://%s:%s -> printer %s", config.WEB_HOST, config.WEB_PORT, config.PRINTER_IP)

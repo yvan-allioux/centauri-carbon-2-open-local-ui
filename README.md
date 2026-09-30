@@ -148,9 +148,9 @@ Everything is configured through **environment variables**, set in
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PRINTER_IP` | `192.168.1.100` | Printer IP address. |
+| `PRINTER_IP` | *(required)* | Printer IP address. |
 | `MQTT_PORT` | `1883` | Port of the embedded MQTT broker. |
-| `PRINTER_SN` | `F01W2X3Y4Z5A6B` | Printer serial number (SN). |
+| `PRINTER_SN` | *(required)* | Printer serial number (SN). |
 | `MQTT_USER` | `elegoo` | MQTT username. |
 | `MQTT_PASS` | `123456` | MQTT password (LAN mode) — also used as the upload token. |
 | `CLIENT_ID` | `ecc2_ui` | MQTT client ID base name (a short random suffix is appended per run). |

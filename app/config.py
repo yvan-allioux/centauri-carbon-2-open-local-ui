@@ -1,9 +1,9 @@
 import os
 
-PRINTER_IP = os.environ.get("PRINTER_IP", "192.168.1.100")
+PRINTER_IP = os.environ.get("PRINTER_IP", "")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 
-PRINTER_SN = os.environ.get("PRINTER_SN", "F01W2X3Y4Z5A6B")
+PRINTER_SN = os.environ.get("PRINTER_SN", "")
 MQTT_USER = os.environ.get("MQTT_USER", "elegoo")
 MQTT_PASS = os.environ.get("MQTT_PASS", "123456")
 CLIENT_ID = os.environ.get("CLIENT_ID", "ecc2_ui")
